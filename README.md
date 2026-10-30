@@ -1,3 +1,6 @@
+> **Idiomas:** 🇺🇸 [English](README.md) | 🇪🇸 [Español](README.es.md)
+---
+
 # HYDRA: Levelized Cost of Hydrogen Calculator
 
 A Streamlit web application for estimating the levelized cost of hydrogen (LCOH) for an electrolysis project. Users can change technical and economic inputs, calculate costs under those assumptions, and review how the main cost components contribute to the result.
