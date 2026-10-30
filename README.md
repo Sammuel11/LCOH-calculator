@@ -1,4 +1,4 @@
-> **Idiomas:** 🇺🇸 [English](README.md) | 🇪🇸 [Español](README.es.md)
+> **Idiomas:** 🇺🇸 [English](README.md) | 🇪🇸 [Español](README-es.md)
 ---
 
 # HYDRA: Levelized Cost of Hydrogen Calculator
