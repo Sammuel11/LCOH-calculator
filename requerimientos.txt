@@ -1,0 +1,20 @@
+# Dependencias de HYDRA v2.0 - Hydrogen Diffusion and Risk Analyzer
+# Python 3.10+
+
+# Core dependencies
+streamlit==1.47.0
+pandas==2.2.2
+numpy==1.26.4
+plotly==5.24.1
+matplotlib==3.9.2
+seaborn==0.13.2
+scipy==1.13.1
+
+# Additional Streamlit components
+streamlit-plotly-events==0.0.6
+streamlit-code-editor==0.1.22
+
+# Compiled dependencies (install from conda-forge recommended)
+# conda install -c conda-forge assimulo sundials
+assimulo>=3.4.0
+sundials>=5.8.0
