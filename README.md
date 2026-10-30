@@ -1,322 +1,168 @@
-# 🧬 HYDRA v2.0 - Hydrogen Diffusion and Risk Analyzer
+# HYDRA: calculadora del costo nivelado de hidrógeno
 
-## Quick Start
+Aplicación web desarrollada con Streamlit para estimar el costo nivelado de hidrógeno (LCOH) de un proyecto de electrólisis. La interfaz permite modificar parámetros técnicos y económicos, calcular el costo con esos supuestos y consultar la distribución del resultado.
 
-### 1. Requisitos Previos
+## Alcance actual
 
-- **Python:** 3.10 o superior
-- **Sistema Operativo:** Windows, macOS, o Linux
-- **Administrador de Paquetes:** Conda (recomendado) o pip
+La aplicación disponible en `appInicio.py` tiene dos secciones:
 
-### 2. Instalación de Dependencias
+- **Inicio:** presenta el propósito de la calculadora, sus supuestos y limitaciones, y una referencia bibliográfica sobre costos de hidrógeno verde.
+- **Cálculo del LCOH:** contiene el formulario de parámetros y muestra el LCOH en USD/kg junto con gráficos de la participación del CAPEX, el OPEX y el reemplazo.
 
-#### Opción A: Conda (Recomendado - Especialmente para `assimulo` y `sundials`)
+Esta versión no incluye los módulos de difusión, análisis de tuberías, fractura, Monte Carlo ni los otros módulos mencionados en documentación anterior.
 
-```bash
-# Crear ambiente virtual
-conda create -n hydra python=3.10 -y
-conda activate hydra
+## Requisitos
 
-# Instalar dependencias principales
-conda install -c conda-forge streamlit==1.47.0 pandas==2.2.2 numpy==1.26.4 plotly==5.24.1 matplotlib==3.9.2 seaborn==0.13.2 scipy==1.13.1
+- Python 3.10 o superior.
+- Las dependencias directas de la aplicación son Streamlit y Plotly.
+- Ejecutar los comandos desde la carpeta raíz del proyecto, donde se encuentran `appInicio.py` y `Codigo\LCOH.py`.
 
-# Instalar dependencias compiladas (críticas para módulos de fractura/ODE)
-conda install -c conda-forge assimulo sundials
+## Instalación y ejecución en Windows
 
-# Instalar componentes adicionales de Streamlit
-pip install streamlit-plotly-events==0.0.6 streamlit-code-editor==0.1.22
+En PowerShell, desde la raíz del proyecto:
+
+```powershell
+py -3.10 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install streamlit==1.47.0 plotly==5.24.1
+python -m streamlit run appInicio.py
 ```
 
-#### Opción B: pip (Nota: Requiere compiladores del sistema para `assimulo` y `sundials`)
+La aplicación suele estar disponible en `http://localhost:8501`. Si el comando `py` no está disponible, utiliza `python` para crear el entorno. Si PowerShell bloquea la activación del entorno virtual, puedes omitir la activación y usar directamente:
 
-```bash
-# Crear ambiente virtual (Python 3.10+)
-python -m venv hydra_env
-source hydra_env/bin/activate  # En Windows: hydra_env\Scripts\activate
-
-# Instalar desde requerimientos.txt
-pip install -r requerimientos.txt
-
-# Si assimulo falla, instala las librerías compiladas vía conda en paralelo:
-# conda install -c conda-forge assimulo sundials
+```powershell
+.\.venv\Scripts\python.exe -m pip install streamlit==1.47.0 plotly==5.24.1
+.\.venv\Scripts\python.exe -m streamlit run appInicio.py
 ```
 
-### 3. Ejecutar la Aplicación
+Invocar Streamlit mediante `python -m streamlit` ayuda a asegurar que se ejecute con el mismo intérprete en el que se instalaron las dependencias.
 
-```bash
-# Desde el directorio raíz del proyecto
-streamlit run appInicio.py
+## Uso de la aplicación
+
+1. Abre la sección **Cálculo del LCOH** desde el menú lateral o desde el botón de la página de inicio.
+2. Ajusta los parámetros técnicos y económicos del formulario.
+3. Pulsa **Calcular LCOH** para actualizar la estimación.
+4. Consulta el resultado en USD/kg y los gráficos de distribución por componente.
+
+La aplicación conserva el último resultado calculado en el estado de sesión de Streamlit.
+
+## Parámetros de entrada
+
+Los valores de la siguiente tabla son los valores iniciales del formulario:
+
+| Grupo | Parámetro | Variable del modelo | Valor inicial | Unidad |
+|---|---|---:|---:|---|
+| CAPEX | Potencia del electrolizador | `p_el` | 1.000 | kW |
+| CAPEX | Costo del electrolizador | `costo_el` | 1.345 | USD/kW |
+| CAPEX | Factor de ingeniería | `a` | 0,19 | Proporción del costo directo |
+| CAPEX | Factor de licencias | `b` | 0,01 | Proporción del costo directo |
+| CAPEX | Factor de contingencias | `c` | 0,15 | Proporción del costo directo |
+| OPEX | Eficiencia de la electrólisis | `efic_el` | 0,65 | Proporción |
+| OPEX | Costo de electricidad (LCOE) | `LCOE` | 0,053 | USD/kWh |
+| OPEX | Consumo de agua | `consumo_agua` | 15 | L/kg H₂ |
+| OPEX | Precio del agua | `precio_agua` | 0,006 | USD/L |
+| OPEX | Factor de mantenimiento | `psi` | 0,05 | Proporción del costo directo |
+| Reemplazo | Factor del costo de reemplazo | `d` | 0,4 | Proporción del costo directo |
+| Reemplazo | Año del reemplazo | `t` | 7 | Años |
+| Producción | Consumo específico de energía del electrolizador | `PC` | 54 | kWh/kg H₂ |
+| Producción | Horas de operación al año | `ha` | 8.760 | h/año |
+| Economía | Tasa de descuento | `tasa_descuento` | 0,08 | Proporción |
+| Economía | Vida del proyecto | `vida_proyecto` | 20 | Años |
+
+El formulario limita la potencia a 100.000 kW y las horas anuales a un máximo de 8.760. La eficiencia y la tasa de descuento admiten valores entre 0 y 1. Para que el cálculo sea finito, no uses cero en la potencia, la eficiencia, el consumo específico de energía ni la tasa de descuento.
+
+El campo `PC` aparece en la interfaz con la unidad `kW/kg`; el modelo y su documentación lo usan como consumo específico de energía en `kWh/kg H₂`.
+
+## Método de cálculo implementado
+
+El código calcula la producción anual como:
+
+```text
+Producción anual (kg H₂) = horas anuales × potencia × eficiencia / consumo específico
 ```
 
-**Resultado:** La interfaz se abrirá en `http://localhost:8501`
+El costo directo de capital se obtiene multiplicando la potencia por el costo específico del electrolizador. Ingeniería, licencias y contingencias se calculan como proporciones de ese costo. El CAPEX se anualiza mediante el factor de recuperación de capital:
 
----
-
-## 📋 Estructura de la Aplicación
-
-```
-calculadora_streamlit/
-├── appInicio.py                          # Punto de entrada principal (Streamlit UI)
-├── requerimientos.txt                    # Dependencias con versiones exactas
-├── README.md                             # Este archivo
-├── MEJORAS_DOCUMENTACION.md              # Registro de cambios recientes
-├── tramos.csv                            # Datos de infraestructura de tubería
-├── planimetria.png                       # Visualización esquemática de red
-└── Codigo/
-    ├── LCOH.py                          # Cálculo de costo nivelado de hidrógeno
-    ├── Permeabilidadcosto_P_1090.py     # Análisis de pérdidas por difusión
-    ├── difusionH2_stress_FD.py          # Simulación de esfuerzos mecánicos (FD)
-    ├── pore_model_scipy_adsorption.py   # Modelo de poro (régimen elástico)
-    ├── propagacion_fracturas.py         # Modelo de fractura (régimen plástico)
-    ├── fractura_montecarlo.py           # Montecarlo de propagación de grietas
-    ├── montecarlo_difusion_basico.py    # Montecarlo de acumulación de H₂
-    ├── costos_diff_monteC_año.py        # Montecarlo de costos anuales
-    ├── utils.py                         # Funciones auxiliares (CSS, formato)
-    └── estilos.css                      # Estilos personalizados
+```text
+CRF = i × (1 + i)^N / ((1 + i)^N − 1)
+CAPEX anualizado = (costo directo + ingeniería + licencias + contingencias) × CRF
 ```
 
----
+El OPEX anual suma el costo de electricidad, el costo de agua y el mantenimiento. El costo de reemplazo se descuenta desde el año indicado en el formulario y se anualiza con el mismo factor de recuperación. Finalmente:
 
-## 🎯 Menús Principales
-
-### 1. **Inicio** 🏠
-Pantalla de bienvenida con:
-- Descripción de HYDRA y contexto del proyecto (UPB-EPM)
-- Vista general de 8 módulos principales
-- Acotaciones técnicas
-- Call-to-action hacia módulos específicos
-- Pie de página con créditos
-
-### 2. **Cálculo del LCOH** 💰
-Análisis económico integrado del costo nivelado de hidrógeno.
-
-**Parámetros:**
-- CAPEX: Potencia (kW), costo específico, ingeniería, licencias, contingencias
-- OPEX: Eficiencia (%), LCOE (USD/kWh), agua, mantenimiento
-- Reemplazo: Factor de degradación y período (años)
-- Económicos: Tasa de descuento (%), vida útil (años)
-
-**Salidas:** Gráficos de distribución de costo, análisis de sensibilidad
-
-### 3. **Pérdidas y Costos** 📉
-Cuantificación de fugas por difusión molecular a través de paredes.
-
-**Características:**
-- Análisis multi-tramo: Producción, Transporte, Distribución
-- Variación temporal: Envejecimiento de materiales
-- Múltiples gases: H₂, H₂GN, CH₄
-- Sensibilidad: Presión, temperatura, espesor
-
-**Salidas:** Tablas de pérdidas, gráficos de costos acumulativos
-
-### 4. **Montecarlo Pérdidas y Costos** 🎲
-Análisis probabilístico de costos con incertidumbre de parámetros.
-
-**Incluye:**
-- Distribuciones de parámetros inciertos (uniforme, normal, etc.)
-- Número de simulaciones: 100–20,000
-- Estadísticos: Media, desv. std., percentiles
-- Identificación de escenarios críticos (worst-case)
-
-**Salidas:** Histogramas, curvas de distribución, tornado plots
-
-### 5. **Acumulación en Recintos Cerrados** 📦
-Evaluación de riesgo de explosividad en espacios confinados.
-
-**Evaluación:**
-- Concentración de H₂ vs. LEL (4% en aire)
-- Probabilidad de excedencia
-- Impacto de ventilación
-- Recomendaciones de diseño
-
-**Salidas:** Gráficos de concentración vs. tiempo, matriz de riesgo
-
-### 6. **Esfuerzos Mecánicos** ⚙️
-Análisis de tensiones, deformaciones y factores de seguridad.
-
-**Método:** Diferencias finitas con acoplamiento tensión-difusión
-
-**Resultados:**
-- Esfuerzo von Mises (Pa)
-- Factor de seguridad (FS) vs. límite elástico
-- Evolución temporal
-- Mapas de criticidad por tramo
-
-**Salidas:** Gráficos 2D/3D, series de tiempo
-
-### 7. **Régimen Elástico y Plástico** 🔄💥
-Modelado de deformación reversible e irreversible con adsorción.
-
-**Régimen Elástico:**
-- Comportamiento reversible (Hooke)
-- Adsorción de H₂ en poros
-- Acumulación de presión interna
-- Deformación volumétrica
-
-**Régimen Plástico:**
-- Daño permanente acumulativo
-- Propagación de grietas por fatiga
-- Criterios de fractura energéticos
-- Vida residual predicha
-
-**Salidas:** Subplots 2×2 (presión poro, fracción ocupada, deformación, daño)
-
-### 8. **Montecarlo Poro (Fractura)** 💥
-Análisis probabilístico de propagación de grietas bajo incertidumbre.
-
-**Cuantifica:**
-- Tiempo a fallo (TTF) para cada tramo
-- Confiabilidad por año (%)
-- Sensibilidad de parámetros
-- Escenarios worst-case y best-case
-- Curvas de supervivencia
-
-**Salidas:** Histogramas TTF, curvas de confiabilidad, Pareto de incertidumbre
-
----
-
-## 🔧 Convenciones y Especificaciones del Proyecto
-
-### Lenguaje y Estilo
-- **Código:** Español para variables, funciones y comentarios (preservar conocimiento del dominio)
-- **Mensajes UI:** Español en la interfaz Streamlit
-- **Documentación:** Español en archivos .md
-
-### Unidades Estándar
-| Magnitud | Unidad | Notas |
-|----------|--------|-------|
-| Temperatura | K (Kelvin) | 273.15 K = 0 °C |
-| Presión | Pa (Pascales) | 1 bar = 100,000 Pa |
-| Longitud | m (metros) | Diámetro, espesor, distancia |
-| Costo Hidrógeno | USD/kg o USD/L | LCOH (Levelized Cost of Hydrogen) |
-| Coeficiente Difusión | m²/s | Típico: 10⁻¹⁰ m²/s |
-| Permeabilidad | mol/(m·s·Pa^0.5) | Ley de Sieverts |
-
-### Estructura de Código
-- **Funciones de cálculo:** Retornan `dict`, `DataFrame` (pandas) o `Figure` (plotly)
-- **No hay llamadas `.show()`:** Streamlit renderiza figuras automáticamente
-- **Importaciones:** `from Codigo import modulo` (desde raíz del proyecto)
-- **Archivo de configuración:** `st.session_state` para cache de resultados
-
-### Archivos de Datos
-- **tramos.csv:** Separador `;` (punto y coma), codificación UTF-8
-- **planimetria.png:** Ruta relativa desde raíz
-
----
-
-## 📚 Referencias Técnicas y Bibliografía
-
-| Tema | Referencia |
-|------|-----------|
-| **LCOH** | DOE Hydrogen and Fuel Cell Technologies Office, *Cost Analysis Framework*, 2020 |
-| **Difusión Molecular** | Crank, J. *Mathematics of Diffusion*. Oxford UP, 1975 |
-| **Mecánica de Fractura** | Griffith, A.A. *The phenomenon of rupture and flow in solids*. RSPA, 1920 |
-| **Fragilización por H₂** | SAE J2340: *Hydrogen Compatibility of Elastomers and Plastics*, 2013 |
-| **Método de Montecarlo** | Metropolis & Ulam. *The Monte Carlo method*. JASA, 1949 |
-| **Modelos de Adsorción** | Langmuir, I. *Adsorption of Gases*. JACS, 1918 |
-
----
-
-## 🐛 Troubleshooting
-
-### Error: "ModuleNotFoundError: No module named 'assimulo'"
-```bash
-# Solución: Instalar desde conda-forge
-conda install -c conda-forge assimulo sundials
-```
-**Causa:** `assimulo` contiene binarios compilados; pip a veces falla.
-
-### Error: "FileNotFoundError: tramos.csv"
-```bash
-# Asegúrate de ejecutar desde el directorio raíz del proyecto
-cd c:\Users\SEC07\calculadora_streamlit  # Ejemplo en Windows
-streamlit run appInicio.py
-```
-**Causa:** Las rutas de archivo son relativas a la raíz del proyecto.
-
-### Error: "StreamlitAPIException: Invalid value for 'column' parameter"
-```bash
-# Actualiza Streamlit
-pip install --upgrade streamlit
-```
-**Causa:** Versión de Streamlit desactualizada.
-
-### Error: "ImportError: cannot import name 'Figure' from plotly.graph_objects"
-```bash
-# Asegúrate de tener la versión correcta de Plotly
-pip install --upgrade plotly==5.24.1
+```text
+LCOH (USD/kg) = (CAPEX anualizado + OPEX anual + reemplazo anualizado)
+                / producción anual de hidrógeno
 ```
 
-### Rendimiento Lento
-- **Verificar:** `st.session_state` para caché; si el caché es antiguo, limpiarlo
-- **Optimizar:** Reducir número de simulaciones en Montecarlo de prueba
-- **GPU (opcional):** No se utiliza en esta versión
+En `Codigo\LCOH.py`, la función `calcular_costo_hidrogeno(...)` también devuelve un valor de LCOH en USD/L y datos de costos y producción. La interfaz actual muestra el valor en USD/kg y los gráficos en USD/kg; no presenta el valor en USD/L.
 
----
+### Salidas visuales
 
-## � Validación y Testing
+- Resultado del costo total en USD/kg.
+- Gráfico de barras apiladas con la contribución al LCOH del CAPEX, OPEX y reemplazo.
+- Gráfico circular con la distribución porcentual de esos componentes.
 
-### Smoke Tests (Manual)
+## Supuestos y limitaciones
 
-Verificar que la instalación es correcta:
+- El modelo calcula un escenario determinista con los parámetros introducidos en el formulario.
+- Supone operación continua y estable de la planta, con demanda constante de hidrógeno.
+- No modela la degradación progresiva de los electrolizadores ni las intermitencias del suministro eléctrico.
+- No incorpora incentivos fiscales, deducciones tributarias, impuestos ni aranceles de importación.
+- No incluye análisis de sensibilidad, simulaciones Monte Carlo ni optimización.
+- Aunque la función de cálculo conserva un parámetro `fu`, no se expone en el formulario y no interviene en las ecuaciones implementadas.
+- Los resultados dependen de los datos de entrada y no sustituyen un análisis financiero o de ingeniería específico del proyecto.
 
-```bash
-# Test 1: Cálculo LCOH básico
-python -c "from Codigo.LCOH import calcular_costo_hidrogeno; print(calcular_costo_hidrogeno())"
+## Referencia bibliográfica mostrada en la página de inicio
 
-# Test 2: Pérdidas de difusión
-python -c "from Codigo.Permeabilidadcosto_P_1090 import calcular_perdidas; print(calcular_perdidas())"
+Benalcazar, P. y Komorowska, A. (2024). “Techno-economic analysis and uncertainty assessment of green hydrogen production in future exporting countries”. *Renewable and Sustainable Energy Reviews*, 199, 114512.
 
-# Test 3: Esfuerzos mecánicos
-python -c "import Codigo.difusionH2_stress_FD as d; res = d.esfuerzos(); print(list(res.keys()))"
+El artículo reporta para Colombia un LCOH de USD 4,1–4,9/kg hacia 2030 en los escenarios que analiza. Ese intervalo es una referencia del estudio, no un rango universal ni una predicción de la calculadora. Los límites de alcance y los supuestos de ambos análisis deben tenerse en cuenta antes de comparar resultados.
 
-# Test 4: Modelo elástico
-python -c "import Codigo.pore_model_scipy_adsorption as p; res = p.poro_ad_model(); print('OK')"
+## Estructura relevante
 
-# Test 5: Modelo plástico (fractura)
-python -c "import Codigo.propagacion_fracturas as pf; res = pf.poro_assi_fract(); print('OK')"
+```text
+.
+├── appInicio.py       # Interfaz Streamlit: Inicio y Cálculo del LCOH
+├── requerimientos.txt # Archivo de dependencias del proyecto
+└── Codigo
+    └── LCOH.py        # Función de cálculo y gráficos del LCOH
 ```
 
----
+## Comprobaciones básicas
 
-## 📧 Soporte y Contacto
+Desde la raíz del proyecto, verifica la sintaxis:
 
-**Contacto Técnico:** samuel.rodriguezs@upb.edu.co
+```powershell
+python -m py_compile appInicio.py Codigo\LCOH.py
+```
 
-**Instituciones:**
-- Universidad Pontificia Bolivariana (UPB) - Medellín, Colombia
-- Empresas Públicas de Medellín (EPM) - Operador de Infraestructura
+Comprueba que el cálculo y la creación de gráficos se pueden importar y ejecutar:
 
-**Equipo Técnico:**
-- Investigación: Laboratorio de Energías Alternativas (UPB)
-- Validación: Departamento de Ingeniería (EPM)
+```powershell
+python -c "from Codigo.LCOH import calcular_costo_hidrogeno, grafico_lcoh, grafico_lcoh_pie; r = calcular_costo_hidrogeno(); print('LCOH: {:.2f} USD/kg'.format(r['LCOH_kg'])); grafico_lcoh(r); grafico_lcoh_pie(r)"
+```
 
----
+## Solución de problemas
 
-## 📄 Licencia y Créditos
+### `streamlit` no se reconoce o aparece `command not found`
 
-© 2025-2026 Universidad Pontificia Bolivariana & Empresas Públicas de Medellín
+Ejecuta Streamlit con el intérprete activo:
 
-- **Versión:** 2.0
-- **Fecha de Lanzamiento:** Enero 2026
-- **Estado:** Producción
-- **Python:** 3.10+
+```powershell
+python -m streamlit run appInicio.py
+```
 
----
+### `ModuleNotFoundError: No module named 'plotly'` o `streamlit`
 
-## ✨ Novedades en v2.0
+Instala el paquete con el mismo intérprete que utilizarás para iniciar la aplicación:
 
-- ✅ Rediseño completo del menú "Inicio" con estética profesional
-- ✅ Descripciones técnicas ampliadas para todos los 8 módulos
-- ✅ Mejora de coherencia y lenguaje técnico
-- ✅ Actualización de `requerimientos.txt` con versiones exactas
-- ✅ Documentación de cambios en `MEJORAS_DOCUMENTACION.md`
-- ✅ Estilos CSS profesionales (gradientes, tipografía)
-- ✅ Iconos emoji consistentes en menús
-- ✅ README.md completo con instrucciones exactas y troubleshooting
+```powershell
+python -m pip install plotly==5.24.1 streamlit==1.47.0
+python -m streamlit run appInicio.py
+```
 
----
+### `ModuleNotFoundError: No module named 'Codigo'`
 
-¡Disfruta analizando infraestructuras de transporte de hidrógeno con HYDRA! 🚀
-
-Para contribuir o reportar errores, abre un issue en el repositorio interno de UPB.
+Ejecuta el comando desde la raíz del proyecto y comprueba que existe `Codigo\LCOH.py`.
